@@ -329,10 +329,29 @@ def home():
             <title>Kréta Naptár Generátor</title>
             <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
             <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+            <style>
+                .github-link {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 1000;
+                    color: #000;
+                    font-size: 24px;
+                    display: flex;
+                    align-items: center;
+                    text-decoration: none;
+                }
+            </style>
             <script id="school-data" type="application/json">{{ school_data|safe }}</script>
             <script src="{{ url_for('static', filename='scripts.js') }}"></script>
         </head>
         <body>
+            <a href="https://github.com/yourusername/yourrepo" class="github-link" target="_blank">
+                <i class="fab fa-github"></i>
+                <span style="margin-left: 8px; font-size: 20px">GitHub</span>
+            </a>
             <div class="container">
                 <h1>Kréta Naptár Generátor</h1>
                 <form method="post" action="/generate">
@@ -371,10 +390,41 @@ def generate():
                 <title>Naptár Létrehozva</title>
                 <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
                 <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                <style>
+                    .github-link {
+                        position: fixed;
+                        bottom: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        z-index: 1000;
+                        color: #000;
+                        font-size: 24px;
+                        display: flex;
+                        align-items: center;
+                        text-decoration: none;
+                    }
+                    .toast {
+                        position: fixed;
+                        bottom: -100px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 16px;
+                        border-radius: 4px;
+                        z-index: 1001;
+                        transition: all 0.3s ease-in-out;
+                        opacity: 0;
+                    }
+                    .toast.show {
+                        bottom: 20px;
+                        opacity: 1;
+                    }
+                </style>
                 <script>
                     function copyToClipboard(text) {
                         navigator.clipboard.writeText(text).then(function() {
-                            // Show the toast message
                             var toast = document.getElementById("toast");
                             toast.classList.add("show");
                             setTimeout(function(){ toast.classList.remove("show"); }, 2000);
@@ -385,6 +435,10 @@ def generate():
                 </script>
             </head>
             <body>
+                <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
+                    <i class="fab fa-github"></i>
+                    <span style="margin-left: 8px; font-size: 20px">GitHub</span>
+                </a>
                 <div class="result-container">
                     <h1>Naptár Létrehozva!</h1>
                     <p>A naptár URL-ed elkészült. Kattints a linkre a másoláshoz:</p>
@@ -393,8 +447,8 @@ def generate():
                     </div>
                     <p>Add hozzá ezt az URL-t a naptár alkalmazásodhoz a dolgozatok követéséhez.</p>
                     <a href="/" class="back-button">Új Naptár Generálása</a>
-                    <div id="toast">Kimásolva!</div>
                 </div>
+                <div id="toast">Kimásolva!</div>
             </body>
             </html>
         ''', url=calendar_url)

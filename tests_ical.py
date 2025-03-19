@@ -348,7 +348,7 @@ def home():
             <script src="{{ url_for('static', filename='scripts.js') }}"></script>
         </head>
         <body>
-            <a href="https://github.com/yourusername/yourrepo" class="github-link" target="_blank">
+            <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
                 <i class="fab fa-github"></i>
                 <span style="margin-left: 8px; font-size: 20px">GitHub</span>
             </a>

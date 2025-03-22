@@ -6,7 +6,7 @@ import json
 import icalendar
 import threading
 import time
-from flask import Flask, Response, request, render_template_string
+from flask import Flask, Response, request, render_template
 from zoneinfo import ZoneInfo
 from hashlib import sha256
 import sqlite3
@@ -322,56 +322,7 @@ def home():
         'search': f"{school['nev'].lower()} {school['telepules'].lower()} {school['azonosito'].lower()}"
     } for school in schools])
     
-    return render_template_string('''
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Kréta Naptár Generátor</title>
-            <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-            <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-            <style>
-                .github-link {
-                    position: fixed;
-                    bottom: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    z-index: 1000;
-                    color: #000;
-                    font-size: 24px;
-                    display: flex;
-                    align-items: center;
-                    text-decoration: none;
-                }
-            </style>
-            <script id="school-data" type="application/json">{{ school_data|safe }}</script>
-            <script src="{{ url_for('static', filename='scripts.js') }}"></script>
-        </head>
-        <body>
-            <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
-                <i class="fab fa-github"></i>
-                <span style="margin-left: 8px; font-size: 20px">GitHub</span>
-            </a>
-            <div class="container">
-                <h1>Kréta Naptár Generátor</h1>
-                <form method="post" action="/generate">
-                    <div class="form-group">
-                        <input type="text" name="username" placeholder="Oktatási azonosító" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" name="password" placeholder="Jelszó" required>
-                    </div>
-                    <div class="form-group search-container">
-                        <input type="text" id="schoolSearch" placeholder="Iskola keresése..." autocomplete="off">
-                        <input type="hidden" id="institute_code" name="institute_code" required>
-                        <div id="schoolDropdown" class="dropdown"></div>
-                    </div>
-                    <button type="submit">Naptár Generálása</button>
-                </form>
-            </div>
-        </body>
-        </html>
-    ''', school_data=school_data)
+    return render_template('home.html', school_data=school_data)
 
 @app.route('/generate', methods=['POST'])
 def generate():
@@ -382,76 +333,7 @@ def generate():
     try:
         user_id = user_manager.add_user(username, password, institute_code)
         calendar_url = f"https://kreta.herowarriors.hu/calendar/{user_id}/tests.ics"
-        
-        return render_template_string('''
-            <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Naptár Létrehozva</title>
-                <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-                <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-                <style>
-                    .github-link {
-                        position: fixed;
-                        bottom: 20px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        z-index: 1000;
-                        color: #000;
-                        font-size: 24px;
-                        display: flex;
-                        align-items: center;
-                        text-decoration: none;
-                    }
-                    .toast {
-                        position: fixed;
-                        bottom: -100px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background-color: #4CAF50;
-                        color: white;
-                        padding: 16px;
-                        border-radius: 4px;
-                        z-index: 1001;
-                        transition: all 0.3s ease-in-out;
-                        opacity: 0;
-                    }
-                    .toast.show {
-                        bottom: 20px;
-                        opacity: 1;
-                    }
-                </style>
-                <script>
-                    function copyToClipboard(text) {
-                        navigator.clipboard.writeText(text).then(function() {
-                            var toast = document.getElementById("toast");
-                            toast.classList.add("show");
-                            setTimeout(function(){ toast.classList.remove("show"); }, 2000);
-                        }, function(err) {
-                            console.error('Could not copy text: ', err);
-                        });
-                    }
-                </script>
-            </head>
-            <body>
-                <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
-                    <i class="fab fa-github"></i>
-                    <span style="margin-left: 8px; font-size: 20px">GitHub</span>
-                </a>
-                <div class="result-container">
-                    <h1>Naptár Létrehozva!</h1>
-                    <p>A naptár URL-ed elkészült. Kattints a linkre a másoláshoz:</p>
-                    <div class="url-container">
-                        <a href="#" onclick="copyToClipboard('{{ url }}'); return false;">{{ url }}</a>
-                    </div>
-                    <p>Add hozzá ezt az URL-t a naptár alkalmazásodhoz a dolgozatok követéséhez.</p>
-                    <a href="/" class="back-button">Új Naptár Generálása</a>
-                </div>
-                <div id="toast">Kimásolva!</div>
-            </body>
-            </html>
-        ''', url=calendar_url)
+        return render_template('result.html', url=calendar_url)
     except Exception as e:
         error_message = "Hibás felhasználónév vagy jelszó. Kérlek ellenőrizd az adataidat!"
         if "Login failed" in str(e):
@@ -461,23 +343,7 @@ def generate():
         else:
             error_message = "Váratlan hiba történt. Kérlek próbáld újra később!"
             
-        return render_template_string('''
-            <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Hiba</title>
-                <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-                <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-            </head>
-            <body>
-                <div class="result-container">
-                    <h1>Hiba</h1>
-                    <p>{{ error }}</p>
-                    <a href="/" class="back-button">Próbáld Újra</a>
-                </div>
-            </body>
-            </html>
-        ''', error=error_message), 400
+        return render_template('result.html', error=error_message), 400
 
 @app.route('/calendar/<user_id>/tests.ics')
 def get_user_calendar(user_id):

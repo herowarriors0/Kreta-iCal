@@ -1,0 +1,72 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naptár Létrehozva</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .github-link {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            color: #000;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        .toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 16px;
+            border-radius: 4px;
+            z-index: 1001;
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+        }
+        .toast.show {
+            bottom: 20px;
+            opacity: 1;
+        }
+    </style>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                var toast = document.getElementById("toast");
+                toast.classList.add("show");
+                setTimeout(function(){ toast.classList.remove("show"); }, 2000);
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+</head>
+<body>
+    <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
+        <i class="fab fa-github"></i>
+        <span style="margin-left: 8px; font-size: 20px">GitHub</span>
+    </a>
+    <div class="result-container">
+        <h1>{% if error %}Hiba{% else %}Naptár Létrehozva!{% endif %}</h1>
+        {% if error %}
+            <p>{{ error }}</p>
+            <a href="/" class="back-button">Próbáld Újra</a>
+        {% else %}
+            <p>A naptár URL-ed elkészült. Kattints a linkre a másoláshoz:</p>
+            <div class="url-container">
+                <a href="#" onclick="copyToClipboard('{{ url }}'); return false;">{{ url }}</a>
+            </div>
+            <p>Add hozzá ezt az URL-t a naptár alkalmazásodhoz a dolgozatok követéséhez.</p>
+            <a href="/" class="back-button">Új Naptár Generálása</a>
+        {% endif %}
+    </div>
+    <div id="toast">Kimásolva!</div>
+</body>
+</html> 

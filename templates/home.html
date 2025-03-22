@@ -1,0 +1,48 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kréta Naptár Generátor</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .github-link {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            color: #000;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+    </style>
+    <script id="school-data" type="application/json">{{ school_data|safe }}</script>
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</head>
+<body>
+    <a href="https://github.com/herowarriors0/Kreta-iCal" class="github-link" target="_blank">
+        <i class="fab fa-github"></i>
+        <span style="margin-left: 8px; font-size: 20px">GitHub</span>
+    </a>
+    <div class="container">
+        <h1>Kréta Naptár Generátor</h1>
+        <form method="post" action="/generate">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Oktatási azonosító" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Jelszó" required>
+            </div>
+            <div class="form-group search-container">
+                <input type="text" id="schoolSearch" placeholder="Iskola keresése..." autocomplete="off">
+                <input type="hidden" id="institute_code" name="institute_code" required>
+                <div id="schoolDropdown" class="dropdown"></div>
+            </div>
+            <button type="submit">Naptár Generálása</button>
+        </form>
+    </div>
+</body>
+</html> 

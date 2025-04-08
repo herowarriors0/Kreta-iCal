@@ -20,6 +20,7 @@ from google_auth import (
     add_custom_test, get_custom_tests, cleanup_expired_tests
 )
 from google.oauth2.credentials import Credentials
+from google.auth.flow import Flow
 
 load_dotenv()
 
@@ -381,7 +382,11 @@ def generate():
     
     try:
         user_id = user_manager.add_user(username, password, institute_code)
-        calendar_url = f"https://kreta.herowarriors.hu/calendar/{user_id}/tests.ics"
+        if request.host.startswith('localhost'):
+            base_url = 'http://localhost:8080'
+        else:
+            base_url = 'https://kreta.herowarriors.hu'
+        calendar_url = f"{base_url}/calendar/{user_id}/tests.ics"
         session['kreta_user_id'] = user_id
         return render_template('result.html', url=calendar_url)
     except Exception as e:
@@ -601,6 +606,25 @@ def delete_test(test_id):
     except Exception as e:
         print(f"Error deleting custom test: {e}")
         return jsonify({'error': str(e)}), 400
+
+def get_google_flow():
+    if request.host.startswith('localhost'):
+        redirect_uri = 'http://localhost:8080/oauth2callback'
+    else:
+        redirect_uri = 'https://kreta.herowarriors.hu/oauth2callback'
+    
+    return Flow.from_client_config(
+        {
+            "web": {
+                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
+        redirect_uri=redirect_uri
+    )
 
 if __name__ == '__main__':
     try:

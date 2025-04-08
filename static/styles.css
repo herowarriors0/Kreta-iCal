@@ -215,3 +215,28 @@ p {
     visibility: visible;
     opacity: 1;
 }
+
+.nav-bar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 1rem;
+    z-index: 1000;
+}
+
+.dashboard-btn {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, #004d7a, #008793);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #003b5e, #006b77);
+}

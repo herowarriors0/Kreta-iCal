@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bejelentkezés - KRÉTA Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <h1>KRÉTA Dashboard Bejelentkezés</h1>
+        {% if request.args.get('error') == 'not_linked' %}
+        <div class="error-message">
+            Ez a Google fiók nincs összekapcsolva KRÉTA fiókkal. Kérlek, először jelentkezz be a KRÉTA-ba és kapcsold össze a fiókodat.
+        </div>
+        {% endif %}
+        <div class="login-box">
+            <a href="{{ url_for('login_with_google') }}" class="google-login-btn">
+                Bejelentkezés Google fiókkal
+            </a>
+            <p class="info-text">
+                Még nincs összekapcsolva a KRÉTA fiókod? <a href="{{ url_for('home') }}">Kattints ide</a> a kezdéshez!
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

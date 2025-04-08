@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRÉTA Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/hu.js"></script>
+    <script src="{{ url_for('static', filename='scripts.js') }}" defer></script>
+</head>
+<body>
+    <nav class="dashboard-nav">
+        <div class="nav-title">KRÉTA Dashboard</div>
+        <div class="nav-links">
+            <a href="{{ url_for('logout') }}" class="logout-btn">Kijelentkezés</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="add-test-section">
+            <h2>Új dolgozat hozzáadása</h2>
+            <form id="addTestForm" class="add-test-form">
+                <div class="form-group">
+                    <label for="subject">Tantárgy*</label>
+                    <input type="text" id="subject" name="subject" required>
+                </div>
+                <div class="form-group">
+                    <label for="date">Dátum*</label>
+                    <input type="text" id="date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="topic">Téma*</label>
+                    <input type="text" id="topic" name="topic" required>
+                </div>
+                <div class="form-group">
+                    <label for="test_type">Típus*</label>
+                    <select id="test_type" name="test_type" required>
+                        <option value="röpdolgozat">Röpdolgozat</option>
+                        <option value="dolgozat">Dolgozat</option>
+                        <option value="témazáró dolgozat">Témazáró dolgozat</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="weight">Súlyozás</label>
+                    <select id="weight" name="weight">
+                        <option value="">Nincs megadva</option>
+                        <option value="0.5">0,5</option>
+                        <option value="1">1</option>
+                        <option value="1.5">1,5</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="teacher">Tanár</label>
+                    <input type="text" id="teacher" name="teacher">
+                </div>
+                <button type="submit" class="add-test-btn">Hozzáadás</button>
+            </form>
+        </div>
+
+        <h1>Közelgő dolgozatok</h1>
+        <div class="tests-container">
+            {% for test in tests %}
+            <div class="test-card {% if test.is_custom %}custom-test{% endif %}" data-test-id="{{ test.id }}">
+                <div class="test-header">
+                    <h3>{{ test.TantargyNeve if test.TantargyNeve is defined else test.subject }}</h3>
+                    <div class="test-actions">
+                        {% if test.is_custom %}
+                        <button onclick="editTest({{ test.id }})" class="edit-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteTest({{ test.id }})" class="delete-btn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% else %}
+                        <label class="switch">
+                            <input type="checkbox" 
+                                   {% if test.enabled %}checked{% endif %}
+                                   onchange="toggleTest('{{ test.id }}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="test-details">
+                    <p class="test-date">{{ test.Datum.split('T')[0] if test.Datum is defined else test.date }}</p>
+                    <p class="test-topic">{{ test.Temaja if test.Temaja is defined else test.topic }}</p>
+                    <p class="test-type">
+                        {{ test.Modja.Leiras if test.Modja is defined else test.test_type }}
+                        {% if test.weight %}({{ test.weight }}){% endif %}
+                    </p>
+                    <p class="test-teacher">{{ test.RogzitoTanarNeve if test.RogzitoTanarNeve is defined else test.teacher if test.teacher else '' }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Dolgozat szerkesztése</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editTestForm" class="edit-test-form">
+                <div class="form-group">
+                    <label for="edit_subject">Tantárgy*</label>
+                    <input type="text" id="edit_subject" name="subject" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_date">Dátum*</label>
+                    <input type="text" id="edit_date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_topic">Téma*</label>
+                    <input type="text" id="edit_topic" name="topic" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_test_type">Típus*</label>
+                    <select id="edit_test_type" name="test_type" required>
+                        <option value="röpdolgozat">Röpdolgozat</option>
+                        <option value="dolgozat">Dolgozat</option>
+                        <option value="témazáró dolgozat">Témazáró dolgozat</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit_weight">Súlyozás</label>
+                    <select id="edit_weight" name="weight">
+                        <option value="">Nincs megadva</option>
+                        <option value="0.5">0,5</option>
+                        <option value="1">1</option>
+                        <option value="1.5">1,5</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit_teacher">Tanár</label>
+                    <input type="text" id="edit_teacher" name="teacher">
+                </div>
+                <input type="hidden" id="edit_test_id">
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn">Mégse</button>
+                    <button type="submit" class="save-btn">Mentés</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        flatpickr("#date", {
+            locale: "hu",
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            altInput: true,
+            altFormat: "Y. F j.",
+        });
+
+        document.getElementById('addTestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                subject: document.getElementById('subject').value,
+                date: document.getElementById('date').value,
+                topic: document.getElementById('topic').value,
+                test_type: document.getElementById('test_type').value,
+                weight: document.getElementById('weight').value || null,
+                teacher: document.getElementById('teacher').value || null
+            };
+
+            try {
+                const response = await fetch('/api/add-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Hiba történt a dolgozat hozzáadása közben!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hiba történt a dolgozat hozzáadása közben!');
+            }
+        });
+
+        async function editTest(testId) {
+            const card = document.querySelector(`[data-test-id="${testId}"]`);
+            const test = {
+                subject: card.querySelector('h3').textContent,
+                date: card.querySelector('.test-date').textContent,
+                topic: card.querySelector('.test-topic').textContent,
+                test_type: card.querySelector('.test-type').textContent.split('(')[0].trim(),
+                weight: (card.querySelector('.test-type').textContent.match(/\((.*?)\)/) || [])[1],
+                teacher: card.querySelector('.test-teacher').textContent
+            };
+            
+            document.getElementById('edit_subject').value = test.subject;
+            document.getElementById('edit_date').value = test.date;
+            document.getElementById('edit_topic').value = test.topic;
+            document.getElementById('edit_test_type').value = test.test_type;
+            document.getElementById('edit_weight').value = test.weight || '';
+            document.getElementById('edit_teacher').value = test.teacher;
+            
+            const form = document.getElementById('editTestForm');
+            const originalSubmit = form.onsubmit;
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const formData = {
+                    subject: document.getElementById('edit_subject').value,
+                    date: document.getElementById('edit_date').value,
+                    topic: document.getElementById('edit_topic').value,
+                    test_type: document.getElementById('edit_test_type').value,
+                    weight: document.getElementById('edit_weight').value || null,
+                    teacher: document.getElementById('edit_teacher').value || null
+                };
+
+                try {
+                    const response = await fetch(`/api/edit-test/${testId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Hiba történt a dolgozat szerkesztése közben!');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Hiba történt a dolgozat szerkesztése közben!');
+                }
+            };
+            
+            document.querySelector('.add-test-section').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('edit_subject').focus();
+        }
+
+        async function deleteTest(testId) {
+            if (!confirm('Biztosan törölni szeretnéd ezt a dolgozatot?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/delete-test/${testId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Hiba történt a dolgozat törlése közben!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hiba történt a dolgozat törlése közben!');
+            }
+        }
+
+        async function toggleTest(testId, enabled) {
+            try {
+                const response = await fetch('/api/toggle-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        test_id: testId,
+                        enabled: enabled
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hiba történt a beállítás mentése közben!');
+            }
+        }
+    </script>
+</body>
+</html> 

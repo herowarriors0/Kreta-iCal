@@ -60,6 +60,12 @@ def get_google_flow():
     
     if not client_id or not client_secret:
         raise ValueError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
+    
+    # Determine the redirect URI based on environment
+    if os.getenv('FLASK_ENV') == 'development':
+        redirect_uri = "http://localhost:8080/oauth2callback"
+    else:
+        redirect_uri = "https://kreta.herowarriors.hu/oauth2callback"
         
     return Flow.from_client_config(
         client_config={
@@ -68,7 +74,7 @@ def get_google_flow():
                 "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": ["https://kreta.herowarriors.hu/oauth2callback"]
+                "redirect_uris": [redirect_uri]
             }
         },
         scopes=[
@@ -76,7 +82,7 @@ def get_google_flow():
             "https://www.googleapis.com/auth/userinfo.profile",
             "openid"
         ],
-        redirect_uri="https://kreta.herowarriors.hu/oauth2callback"
+        redirect_uri=redirect_uri
     )
 
 def login_required(f):

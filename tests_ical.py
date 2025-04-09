@@ -20,6 +20,7 @@ from google_auth import (
     add_custom_test, get_custom_tests, cleanup_expired_tests
 )
 from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
 
 load_dotenv()
 
@@ -451,32 +452,42 @@ def oauth2callback():
     flow = get_google_flow()
     
     try:
+        # Get the full URL and ensure it uses HTTPS
+        callback_url = request.url
+        if callback_url.startswith('http://'):
+            callback_url = 'https://' + callback_url[7:]
+        
         flow.fetch_token(
-            authorization_response=request.url,
+            authorization_response=callback_url,
             state=session['state']
         )
         
-        credentials = flow.credentials
-        user_info = flow.oauth2session.get(
-            'https://www.googleapis.com/oauth2/v1/userinfo'
-        ).json()
-        
-        google_id = user_info['id']
-        email = user_info['email']
-        
-        if session.get('linking'):
-            if 'kreta_user_id' in session:
-                link_google_account(google_id, email, session['kreta_user_id'])
-                session['google_id'] = google_id
-                return redirect(url_for('dashboard'))
-            return redirect(url_for('home'))
-        else:
-            user = get_user_by_google_id(google_id)
-            if user:
-                session['google_id'] = google_id
-                session['kreta_user_id'] = user['id'] 
-                return redirect(url_for('dashboard'))
-            return redirect(url_for('dashboard_login', error='not_linked'))
+        try:
+            credentials = flow.credentials
+            user_info = flow.oauth2session.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo'  # Updated endpoint
+            ).json()
+            
+            google_id = user_info['id']
+            email = user_info['email']
+            
+            if session.get('linking'):
+                if 'kreta_user_id' in session:
+                    link_google_account(google_id, email, session['kreta_user_id'])
+                    session['google_id'] = google_id
+                    return redirect(url_for('dashboard'))
+                return redirect(url_for('home'))
+            else:
+                user = get_user_by_google_id(google_id)
+                if user:
+                    session['google_id'] = google_id
+                    session['kreta_user_id'] = user['id'] 
+                    return redirect(url_for('dashboard'))
+                return redirect(url_for('dashboard_login', error='not_linked'))
+                
+        except Exception as e:
+            print(f"Error getting user info: {e}")
+            return redirect(url_for('dashboard_login', error='user_info_failed'))
             
     except Exception as e:
         print(f"OAuth error: {e}")
@@ -601,6 +612,28 @@ def delete_test(test_id):
     except Exception as e:
         print(f"Error deleting custom test: {e}")
         return jsonify({'error': str(e)}), 400
+
+def get_google_flow():
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    
+    return Flow.from_client_config(
+        client_config={
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["https://kreta.herowarriors.hu/oauth2callback"]
+            }
+        },
+        scopes=[
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
+        ],
+        redirect_uri="https://kreta.herowarriors.hu/oauth2callback"
+    )
 
 if __name__ == '__main__':
     try:

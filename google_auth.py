@@ -55,24 +55,29 @@ def setup_google_auth_db():
         conn.commit()
 
 def get_google_flow():
-    host = request.host_url.rstrip('/')
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
     
-    config = {
-        "web": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [f"{host}/oauth2callback"],
-        }
-    }
-    
-    flow = Flow.from_client_config(
-        config,
-        scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email'],
-        redirect_uri=f"{host}/oauth2callback"
+    if not client_id or not client_secret:
+        raise ValueError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
+        
+    return Flow.from_client_config(
+        client_config={
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["https://kreta.herowarriors.hu/oauth2callback"]
+            }
+        },
+        scopes=[
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
+        ],
+        redirect_uri="https://kreta.herowarriors.hu/oauth2callback"
     )
-    return flow
 
 def login_required(f):
     @wraps(f)

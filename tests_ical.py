@@ -125,6 +125,8 @@ class TestManager:
         self.update_lock = threading.Lock()
         self.existing_test_ids = set()
         self.user_manager = user_manager
+        self.update_thread = None
+        self.running = True
         
     def start_periodic_updates(self, user_id, institute_code):
         self.user_id = user_id
@@ -132,6 +134,32 @@ class TestManager:
         
         self._do_update()
         
+        self.update_thread = threading.Thread(target=self._periodic_update_loop)
+        self.update_thread.daemon = True
+        self.update_thread.start()
+        
+    def _periodic_update_loop(self):
+        while self.running:
+            now = datetime.now(ZoneInfo("Europe/Budapest"))
+            
+            if now.hour < 12:
+                next_update = now.replace(hour=12, minute=00, second=0, microsecond=0)
+            else:
+                next_update = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            seconds_until_update = (next_update - now).total_seconds()
+            
+            if seconds_until_update <= 0:
+                if now.hour < 12:
+                    next_update = now.replace(hour=12, minute=0, second=0, microsecond=0)
+                else:
+                    next_update = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                seconds_until_update = (next_update - now).total_seconds()
+            
+            time.sleep(seconds_until_update)
+            
+            self._do_update()
+            
     def _do_update(self):
         try:
             with self.update_lock:

@@ -174,9 +174,9 @@ class TestManager:
                 for test in new_tests:
                     test_id = f"{test['Datum']}-{test['TantargyNeve']}-{test['Temaja']}"
                     current_test_ids.add(test_id)
+                    updated_tests.append(test)
                     
                     if test_id not in self.existing_test_ids:
-                        updated_tests.append(test)
                         self.existing_test_ids.add(test_id)
                 
                 for test in self.tests:

@@ -587,6 +587,10 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+@app.route('/robots.txt')
+def robots():
+    return Response("User-agent: *\nDisallow: /", mimetype="text/plain")
+
 @app.route('/api/edit-test/<int:test_id>', methods=['PUT'])
 @login_required
 def edit_test(test_id):

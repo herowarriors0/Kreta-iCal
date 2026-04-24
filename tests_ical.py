@@ -1,7 +1,8 @@
 from requests import Session
 from bs4 import BeautifulSoup as bs
 from urllib.parse import urlparse, parse_qs
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+import calendar
 import json
 import icalendar
 import threading
@@ -51,7 +52,13 @@ def login(UserName: str, Password: str, InstituteCode: str) -> dict:
         }
 
         response = session.request("POST", "https://idp.e-kreta.hu/account/login", headers=headers, data=payload, allow_redirects=False)
-        if response.status_code != 200:
+        
+        if response.status_code == 200:
+            soup2 = bs(response.text, 'html.parser')
+            err = soup2.find(class_='validation-summary-errors')
+            if err:
+                raise Exception("Login failed check your credentials")
+        elif response.status_code not in (301, 302):
             raise Exception("Login failed check your credentials")
 
         response = session.request("GET", "https://idp.e-kreta.hu/connect/authorize/callback?prompt=login&nonce=wylCrqT4oN6PPgQn2yQB0euKei9nJeZ6_ffJ-VpSKZU&response_type=code&code_challenge_method=S256&scope=openid%20email%20offline_access%20kreta-ellenorzo-webapi.public%20kreta-eugyintezes-webapi.public%20kreta-fileservice-webapi.public%20kreta-mobile-global-webapi.public%20kreta-dkt-webapi.public%20kreta-ier-webapi.public&code_challenge=HByZRRnPGb-Ko_wTI7ibIba1HQ6lor0ws4bcgReuYSQ&redirect_uri=https%3A%2F%2Fmobil.e-kreta.hu%2Fellenorzo-student%2Fprod%2Foauthredirect&client_id=kreta-ellenorzo-student-mobile-ios&state=kreten_student_mobile&suppressed_prompt=login", allow_redirects=False)
@@ -89,23 +96,57 @@ def refresh_token(refresh_token: str, institute_code: str) -> dict:
         return response.json()
 
 def get_announced_tests(access_token: str, institute_code: str) -> list:
+    """Lekeri az osszes bejelentett szamonkerest a teljes tanevre.
+    
+    Az API max 1 honapos intervallumot enged, ezert havonta kerdeziuk le.
+    A tanevre vonatkozoan szeptember 1-tol junius 30-ig kerdezunk.
+    """
     with Session() as session:
-        date_from = datetime.now().strftime("%Y-%m-%d")
-        date_to = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        now = datetime.now(ZoneInfo("Europe/Budapest"))
         
-        url = f"https://{institute_code}.e-kreta.hu/ellenorzo/v3/sajat/BejelentettSzamonkeresek"
-        url += f"?datumTol={date_from}&datumIg={date_to}"
+        if now.month >= 9:
+            school_year_start = now.year
+        else:
+            school_year_start = now.year - 1
+        
+        month_ranges = []
+        year = school_year_start
+        for month in range(9, 13):
+            last_day = calendar.monthrange(year, month)[1]
+            month_ranges.append(
+                (f"{year}-{month:02d}-01", f"{year}-{month:02d}-{last_day:02d}")
+            )
+        year += 1
+        for month in range(1, 7):
+            last_day = calendar.monthrange(year, month)[1]
+            month_ranges.append(
+                (f"{year}-{month:02d}-01", f"{year}-{month:02d}-{last_day:02d}")
+            )
         
         headers = {
             'Authorization': f'Bearer {access_token}',
-            'apiKey': os.getenv('API_KEY') 
+            'apiKey': '21ff6c25-d1da-4a68-a811-c881a6057463'
         }
         
-        response = session.get(url, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"Failed to get tests: {response.text}")
-            
-        return response.json()
+        all_tests = []
+        seen_uids = set()
+        
+        for date_from, date_to in month_ranges:
+            url = (
+                f"https://{institute_code}.e-kreta.hu/ellenorzo/v3/sajat/BejelentettSzamonkeresek"
+                f"?datumTol={date_from}&datumIg={date_to}"
+            )
+            response = session.get(url, headers=headers)
+            if response.status_code != 200:
+                print(f"Hiba a {date_from}-{date_to} intervallumban: {response.text}")
+                continue
+            for test in response.json():
+                uid = test.get('Uid')
+                if uid not in seen_uids:
+                    seen_uids.add(uid)
+                    all_tests.append(test)
+        
+        return all_tests
 
 def get_schools():
     with Session() as session:
@@ -211,7 +252,7 @@ class TestManager:
                 try: 
                     test_id = f"{test['Datum']}-{test['TantargyNeve']}-{test['Temaja']}"
                     
-                    if not preferences.get(test_id, True):
+                    if not bool(preferences.get(test_id, 1)):
                         print(f"Skipping disabled test: {test['TantargyNeve']}")
                         continue
                     
@@ -240,7 +281,7 @@ class TestManager:
                 except Exception as e:
                     print(f"Error adding KRÉTA test to calendar: {e}")
             
-            custom_tests = get_custom_tests(self.user_id)
+            custom_tests = get_custom_tests(self.user_id, include_past=True)
             for test in custom_tests:
                 try:
                     event = icalendar.Event()
@@ -358,7 +399,16 @@ class UserManager:
                 )
                 return auth_data['access_token']
             except Exception as e:
+                error_str = str(e).lower()
+                if 'invalid_grant' in error_str or 'token refresh failed' in error_str:
+                    print(f"Refresh token lejart user {user_id}-hoz. Torlom a DB-bol.")
+                    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+                    conn.commit()
+                    if user_id in self.test_managers:
+                        del self.test_managers[user_id]
+                    raise Exception("Session expired - please re-register at the homepage")
                 raise Exception(f"Failed to refresh token: {e}")
+
 
     @lru_cache(maxsize=1)
     def get_schools_cached(self):
@@ -480,7 +530,6 @@ def oauth2callback():
     flow = get_google_flow()
     
     try:
-        # Get the full URL and ensure it uses HTTPS
         callback_url = request.url
         if callback_url.startswith('http://'):
             callback_url = 'https://' + callback_url[7:]
@@ -493,7 +542,7 @@ def oauth2callback():
         try:
             credentials = flow.credentials
             user_info = flow.oauth2session.get(
-                'https://www.googleapis.com/oauth2/v2/userinfo'  # Updated endpoint
+                'https://www.googleapis.com/oauth2/v2/userinfo'
             ).json()
             
             google_id = user_info['id']
@@ -649,7 +698,6 @@ def get_google_flow():
     client_id = os.getenv('GOOGLE_CLIENT_ID')
     client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
     
-    # Determine the redirect URI based on environment
     if os.getenv('FLASK_ENV') == 'development':
         redirect_uri = "http://localhost:8080/oauth2callback"
     else:

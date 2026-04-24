@@ -61,7 +61,6 @@ def get_google_flow():
     if not client_id or not client_secret:
         raise ValueError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
     
-    # Determine the redirect URI based on environment
     if os.getenv('FLASK_ENV') == 'development':
         redirect_uri = "http://localhost:8080/oauth2callback"
     else:
@@ -137,15 +136,24 @@ def add_custom_test(kreta_user_id, subject, date, topic, test_type, weight=None,
         )
         conn.commit()
 
-def get_custom_tests(kreta_user_id):
+def get_custom_tests(kreta_user_id, include_past=False):
     with sqlite3.connect('users.db') as conn:
         conn.row_factory = sqlite3.Row
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        tests = conn.execute(
-            'SELECT * FROM custom_tests WHERE kreta_user_id = ? AND date >= ?',
-            (kreta_user_id, current_date)
-        ).fetchall()
+        if include_past:
+            school_year = datetime.now().year if datetime.now().month >= 9 else datetime.now().year - 1
+            cutoff = f"{school_year}-09-01"
+            tests = conn.execute(
+                'SELECT * FROM custom_tests WHERE kreta_user_id = ? AND date >= ? ORDER BY date',
+                (kreta_user_id, cutoff)
+            ).fetchall()
+        else:
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            tests = conn.execute(
+                'SELECT * FROM custom_tests WHERE kreta_user_id = ? AND date >= ? ORDER BY date',
+                (kreta_user_id, current_date)
+            ).fetchall()
         return [dict(test) for test in tests]
+
 
 def cleanup_expired_tests():
     with sqlite3.connect('users.db') as conn:
